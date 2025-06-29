@@ -1,34 +1,165 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <title>Flugreport Login</title>
+  <meta charset="UTF-8" />
+  <title>Wisag Flugreport</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f5f5f5; color: #333; padding: 20px; }
+    #login, #app { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 8px; }
+    h1, h2 { text-align: center; color: #444; }
+    label { display: block; margin: 10px 0 5px; font-weight: bold; }
+    input, select, button { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; }
+    button { background: #0066cc; color: white; border: none; cursor: pointer; }
+    button:hover { background: #005bb5; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { padding: 8px; border: 1px solid #ccc; text-align: center; }
+    th { background: #eee; }
+    .btn-small { width: auto; padding: 5px 10px; margin-right: 5px; font-size: 0.9em; }
+  </style>
 </head>
 <body>
-  <div id="login">
-    <h2>Login</h2>
-    <input type="text" id="user" placeholder="Usuario"><br>
-    <input type="password" id="pass" placeholder="Contraseña"><br>
-    <button onclick="login()">Entrar</button>
-    <p id="error" style="color:red;"></p>
-  </div>
 
-  <div id="app" style="display:none;">
-    <h2>Bienvenido a Flugreport</h2>
-    <p>Página en construcción. Sistema de reportes vendrá aquí.</p>
-  </div>
+<div id="login">
+  <h2>🔒 Login Wisag</h2>
+  <input type="text" id="user" placeholder="Usuario">
+  <input type="password" id="pass" placeholder="Contraseña">
+  <button onclick="login()">Entrar</button>
+  <p id="error" style="color:red;"></p>
+</div>
 
-  <script>
-    function login() {
-      const u = document.getElementById('user').value;
-      const p = document.getElementById('pass').value;
-      if (u === 'wisag' && p === 'Condor@WISAGinDUS') {
-        document.getElementById('login').style.display = 'none';
-        document.getElementById('app').style.display = 'block';
-      } else {
-        document.getElementById('error').innerText = 'Usuario o contraseña incorrectos';
-      }
+<div id="app" style="display:none;">
+  <h1>Flugreport</h1>
+  <label>Fecha del reporte:</label>
+  <input type="date" id="date" value="">
+  <button onclick="addReport()">➕ Nuevo vuelo</button>
+  <button onclick="exportAll()" style="background:#28a745">📄 Exportar todos a PDF</button>
+
+  <table>
+    <thead>
+      <tr>
+        <th>#</th><th>Aerolínea</th><th>Vuelo</th><th>STD</th><th>ATD</th><th>Delay</th><th>Min</th><th>Check‑in</th><th>Gate</th><th>Firma</th><th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+</div>
+
+<script>
+  const USER = 'wisag', PASS = 'Condor@WISAGinDUS';
+  const $ = s => document.querySelector(s);
+  let reports = JSON.parse(localStorage.getItem('flugReports') || '{}');
+  let editIdx = null;
+
+  function login() {
+    if ($('#user').value === USER && $('#pass').value === PASS) {
+      $('#login').style.display = 'none';
+      $('#app').style.display = 'block';
+      initApp();
+    } else {
+      $('#error').innerText = 'Credenciales incorrectas';
     }
-  </script>
+  }
+
+  function initApp() {
+    const today = new Date().toISOString().split('T')[0];
+    $('#date').value = today;
+    loadReports();
+    $('#date').addEventListener('change', loadReports);
+  }
+
+  function loadReports() {
+    const key = $('#date').value;
+    const arr = reports[key] || [];
+    const body = $('#tableBody');
+    body.innerHTML = '';
+    arr.forEach((r, i) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${i+1}</td><td>${r.airline}</td><td>${r.flight}</td><td>${r.std}</td><td>${r.atd}</td>
+        <td>${r.code}</td><td>${r.minutes}</td><td>${r.checkin}</td><td>${r.gate}</td><td>${r.sign}</td>
+        <td>
+          <button class="btn-small" onclick="editReport(${i})">✏️</button>
+          <button class="btn-small" onclick="deleteReport(${i})">🗑️</button>
+          <button class="btn-small" onclick="exportSingle(${i})">📄</button>
+        </td>`;
+      body.appendChild(tr);
+    });
+  }
+
+  function addReport() {
+    const key = $('#date').value;
+    const newR = { airline:'', flight:'', std:'', atd:'', code:'', minutes:'', checkin:'', gate:'', sign:'' };
+    reports[key] = reports[key] || [];
+    reports[key].push(newR);
+    editIdx = reports[key].length - 1;
+    saveReports();
+    loadReports();
+    editReport(editIdx);
+  }
+
+  function editReport(i) {
+    const r = reports[$('#date').value][i];
+    const tr = $('#tableBody').children[i];
+    tr.innerHTML = `
+      <td>${i+1}</td>
+      ${['airline','flight','std','atd','code','minutes','checkin','gate','sign'].map(f =>
+        `<td><input value="${r[f]}"></td>`).join('')}
+      <td>
+        <button class="btn-small" onclick="saveEdit(${i})">💾</button>
+      </td>`;
+  }
+
+  function saveEdit(i) {
+    const tr = $('#tableBody').children[i];
+    const inputs = tr.querySelectorAll('input');
+    const keys = ['airline','flight','std','atd','code','minutes','checkin','gate','sign'];
+    const obj = {};
+    inputs.forEach((inp,j) => obj[keys[j]] = inp.value.trim());
+    reports[$('#date').value][i] = obj;
+    saveReports();
+    loadReports();
+  }
+
+  function deleteReport(i) {
+    if (!confirm('¿Eliminar este reporte?')) return;
+    reports[$('#date').value].splice(i,1);
+    saveReports();
+    loadReports();
+  }
+
+  function saveReports() {
+    localStorage.setItem('flugReports', JSON.stringify(reports));
+  }
+
+  function exportSingle(i) {
+    const { jsPDF } = window.jspdf;
+    const r = reports[$('#date').value][i];
+    const doc = new jsPDF();
+    doc.text(`Reporte ${$('#date').value}`,14,15);
+    doc.autoTable({
+      head: [['Aerolínea','Vuelo','STD','ATD','Delay','Min','Check‑in','Gate','Firma']],
+      body: [[r.airline,r.flight,r.std,r.atd,r.code,r.minutes,r.checkin,r.gate,r.sign]],
+      startY: 20
+    });
+    doc.save(`Reporte_${r.flight}_${$('#date').value}.pdf`);
+  }
+
+  function exportAll() {
+    const { jsPDF } = window.jspdf;
+    const arr = reports[$('#date').value] || [];
+    if (arr.length === 0) return alert('No hay reportes hoy');
+    const doc = new jsPDF();
+    doc.text(`Reportes ${$('#date').value}`,14,15);
+    doc.autoTable({
+      head: [['#','Aerolínea','Vuelo','STD','ATD','Delay','Min','Check‑in','Gate','Firma']],
+      body: arr.map((r,i)=>[i+1,r.airline,r.flight,r.std,r.atd,r.code,r.minutes,r.checkin,r.gate,r.sign]),
+      startY: 20
+    });
+    doc.save(`AllReportes_${$('#date').value}.pdf`);
+  }
+</script>
 </body>
 </html>
