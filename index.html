@@ -1,49 +1,161 @@
-
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8" />
-  <title>WISAG Flugreport</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="style.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flugreport - WISAG</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.0/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.14/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    body { font-family: 'Roboto', sans-serif; background: #f4f6f9; margin: 0; padding: 0; }
+    header, footer { background: #004080; color: white; text-align: center; padding: 15px 0; }
+    main { max-width: 800px; margin: 30px auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+    label { display: block; margin-top: 15px; font-weight: bold; }
+    select, input[type="text"], textarea, button { width: 100%; padding: 10px; margin-top: 5px; margin-bottom: 15px; border-radius: 5px; border: 1px solid #ccc; font-size: 16px; }
+    textarea { height: 100px; }
+    #logo-airline { height: 60px; display: block; margin: 10px auto 20px; }
+    .inline { display: flex; gap: 10px; flex-wrap: wrap; }
+    .inline > div { flex: 1; }
+    .small { width: 100%; }
+    #login-screen { max-width: 400px; margin: 100px auto; text-align: center; }
+    #login-screen input { max-width: 300px; }
+    button { background-color: #007acc; color: white; border: none; cursor: pointer; }
+    button:hover { background-color: #005fa3; }
+  </style>
 </head>
 <body>
-  <div id="login">
-    <div class="login-box">
-      <img src="logo-wisag.png" alt="WISAG Logo" class="logo">
-      <h2>🔒 Login Wisag</h2>
-      <input type="text" id="user" placeholder="Usuario">
-      <input type="password" id="pass" placeholder="Contraseña">
-      <button onclick="login()">Entrar</button>
-      <p id="error" class="error-msg"></p>
-    </div>
+  <div id="login-screen">
+    <h2>Login</h2>
+    <input type="password" id="pwd" placeholder="Passwort">
+    <button id="login-btn">Login</button>
   </div>
 
-  <div id="app" style="display:none;">
-    <header>
-      <img src="logo-condor.png" alt="Condor">
-      <img src="logo-klm.png" alt="KLM">
-      <img src="logo-af.png" alt="Air France">
-      <img src="logo-easyjet.png" alt="easyJet">
-    </header>
-    <h1>Flugreport</h1>
-    <label>Fecha del reporte:</label>
-    <input type="date" id="date" value="">
-    <button onclick="addReport()">➕ Nuevo vuelo</button>
-    <button onclick="exportAll()" class="btn-green">📄 Exportar todos a PDF</button>
+  <div id="app-screen" style="display:none">
+    <header><h1>Flugreport-Formular</h1></header>
+    <main>
+      <label>Fluggesellschaft wählen:</label>
+      <select id="airline">
+        <option value="condor" data-logo="condor.png">Condor</option>
+        <option value="afklm" data-logo="airfranceklm.png">Air France – KLM</option>
+        <option value="easyjet" data-logo="easyjet.png">EasyJet</option>
+      </select>
+      <img id="logo-airline" src="condor.png" alt="Airline-Logo">
 
-    <table>
-      <thead>
-        <tr>
-          <th>#</th><th>Aerolínea</th><th>Vuelo</th><th>STD</th><th>ATD</th><th>Delay</th><th>Min</th><th>Check-in</th><th>Gate</th><th>Firma</th><th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody id="tableBody"></tbody>
-    </table>
+      <label>Flugnummer:</label>
+      <input type="text" id="flight" placeholder="z. B. DE1234">
+      <div id="destination">Ziel: –</div>
+
+      <div class="inline">
+        <div><label>STD:</label><input type="text" id="std" placeholder="hh:mm"></div>
+        <div><label>ATD:</label><input type="text" id="atd" placeholder="hh:mm"></div>
+      </div>
+
+      <div id="delay-codes">
+        <div class="inline">
+          <div><label>Delay Code:</label><input type="text" class="small code" placeholder="z. B. WX"></div>
+          <div><label>Minuten:</label><input type="text" class="small mins" placeholder="z. B. 15"></div>
+        </div>
+      </div>
+      <button id="add-delay" type="button">+ weiterer Delay Code</button>
+
+      <label>Check‑in Report:</label>
+      <textarea id="checkin" placeholder="Bericht zum Check‑in..."></textarea>
+
+      <label>Gate Report:</label>
+      <textarea id="gate" placeholder="Bericht zum Gate..."></textarea>
+
+      <label>Unterschrift (Name):</label>
+      <input type="text" id="signature" placeholder="Ihr Name">
+
+      <div class="inline">
+        <button id="back" type="button">Zurück</button>
+        <button id="export-one" type="button">PDF Flug</button>
+        <button id="export-all" type="button">PDF Tagesbericht</button>
+      </div>
+    </main>
+    <footer><button id="logout">Logout</button></footer>
   </div>
 
-  <script src="app.js"></script>
+  <script>
+    const correctPwd = "Condor2025!"; // Cambia esta contraseña si quieres
+    const reports = [];
+    const flightDestinations = {
+      "DE1234": "Frankfurt", "AF456": "Paris CDG", "KL789": "Amsterdam", "EZY987": "London Gatwick", "EZY654": "Berlin"
+    };
+
+    document.getElementById('login-btn').onclick = () => {
+      if (document.getElementById('pwd').value === correctPwd) {
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('app-screen').style.display = 'block';
+      } else alert('Falsches Passwort');
+    };
+
+    const airlineSelect = document.getElementById("airline"),
+          logo = document.getElementById("logo-airline"),
+          flightInput = document.getElementById("flight"),
+          destinationDiv = document.getElementById("destination"),
+          delayContainer = document.getElementById("delay-codes"),
+          addDelayBtn = document.getElementById("add-delay");
+
+    airlineSelect.addEventListener("change",()=>{
+      logo.src = airlineSelect.selectedOptions[0].dataset.logo;
+    });
+
+    flightInput.addEventListener("input",()=>{
+      const dest = flightDestinations[ flightInput.value.trim().toUpperCase() ] || "–";
+      destinationDiv.innerText = "Ziel: " + dest;
+    });
+
+    addDelayBtn.addEventListener("click",()=>{
+      const div = document.createElement("div");
+      div.className = "inline";
+      div.innerHTML = `
+        <div><input type="text" class="small code" placeholder="z. B. WX"></div>
+        <div><input type="text" class="small mins" placeholder="Min"></div>
+      `;
+      delayContainer.appendChild(div);
+    });
+
+    document.getElementById("back").onclick = ()=>history.back();
+    document.getElementById("logout").onclick = ()=>location.reload();
+
+    function collectForm() {
+      const codes = Array.from(document.querySelectorAll(".code")).map(i => i.value);
+      const mins = Array.from(document.querySelectorAll(".mins")).map(i => i.value);
+      const delays = codes.map((c,i)=> `${c} - ${mins[i]}min`);
+      return {
+        Datum: new Date().toLocaleDateString(),
+        Airline: airlineSelect.value,
+        Flugnummer: flightInput.value,
+        Ziel: destinationDiv.innerText.replace("Ziel: ", ""),
+        STD: document.getElementById("std").value,
+        ATD: document.getElementById("atd").value,
+        Delay_Codes: delays.join(", "),
+        Checkin_Report: document.getElementById("checkin").value,
+        Gate_Report: document.getElementById("gate").value,
+        Unterschrift: document.getElementById("signature").value
+      };
+    }
+
+    document.getElementById("export-one").onclick = () => {
+      const r = collectForm();
+      const doc = new jspdf.jsPDF();
+      doc.text(`Flugreport ${r.Flugnummer}`, 14, 20);
+      doc.autoTable({ head: [["Feld", "Wert"]], body: Object.entries(r), startY: 30 });
+      doc.save(`${r.Flugnummer}.pdf`);
+    };
+
+    document.getElementById("export-all").onclick = () => {
+      const doc = new jspdf.jsPDF();
+      reports.push(collectForm());
+      reports.forEach((r,i)=>{
+        if (i > 0) doc.addPage();
+        doc.text(`Flugreport ${r.Flugnummer} (${r.Datum})`, 14, 20);
+        doc.autoTable({ head: [["Feld", "Wert"]], body: Object.entries(r), startY: 30 });
+      });
+      doc.save(`Tagesberichte_${new Date().toISOString().slice(0,10)}.pdf`);
+    };
+  </script>
 </body>
 </html>
