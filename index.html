@@ -2,120 +2,33 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <title>Flugreport</title>
-  <style>
-    body { font-family: Arial; margin: 20px; }
-    #login { max-width: 300px; margin: auto; }
-    #app { display: none; }
-    table, input, select, button { margin: 5px 0; }
-  </style>
+  <title>Flugreport Login</title>
 </head>
 <body>
+  <div id="login">
+    <h2>Login</h2>
+    <input type="text" id="user" placeholder="Usuario"><br>
+    <input type="password" id="pass" placeholder="Contraseña"><br>
+    <button onclick="login()">Entrar</button>
+    <p id="error" style="color:red;"></p>
+  </div>
 
-<div id="login">
-  <h2>Login</h2>
-  <input type="text" id="user" placeholder="Usuario"><br>
-  <input type="password" id="pass" placeholder="Contraseña"><br>
-  <button onclick="login()">Entrar</button>
-  <p id="error" style="color:red;"></p>
-</div>
+  <div id="app" style="display:none;">
+    <h2>Bienvenido a Flugreport</h2>
+    <p>Página en construcción. Sistema de reportes vendrá aquí.</p>
+  </div>
 
-<div id="app">
-  <h2>Flugreport</h2>
-  <label>Fecha: <input type="date" id="date"></label>
-  <button onclick="addReport()">➕ Añadir vuelo</button>
-  <button onclick="exportAll()">📄 Exportar todo a PDF</button>
-  <table border="1" id="table">
-    <thead>
-      <tr>
-        <th>Aerolínea</th><th>Vuelo</th><th>STD</th><th>ATD</th>
-        <th>Delaycode</th><th>Minutos</th><th>Check-in</th><th>Gate</th><th>Firma</th><th>Acciones</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-</div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script>
-  const $ = selector => document.querySelector(selector);
-  const storageKey = () => 'flug_' + $('#date').value;
-
-  function login() {
-    if ($('#user').value === 'wisag' && $('#pass').value === 'Condor@WISAGinDUS') {
-      $('#login').style.display = 'none';
-      $('#app').style.display = 'block';
-    } else {
-      $('#error').textContent = 'Usuario o contraseña incorrectos';
+  <script>
+    function login() {
+      const u = document.getElementById('user').value;
+      const p = document.getElementById('pass').value;
+      if (u === 'wisag' && p === 'Condor@WISAGinDUS') {
+        document.getElementById('login').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+      } else {
+        document.getElementById('error').innerText = 'Usuario o contraseña incorrectos';
+      }
     }
-  }
-
-  function addReport() {
-    const row = document.createElement('tr');
-    const fields = ['airline', 'flight', 'std', 'atd', 'code', 'minutes', 'checkin', 'gate', 'signature'];
-    fields.forEach(f => {
-      const td = document.createElement('td');
-      const input = document.createElement('input');
-      input.placeholder = f;
-      td.appendChild(input);
-      row.appendChild(td);
-    });
-    const td = document.createElement('td');
-    const save = document.createElement('button');
-    save.textContent = '💾';
-    save.onclick = () => saveReport();
-    td.appendChild(save);
-    row.appendChild(td);
-    $('#table tbody').appendChild(row);
-  }
-
-  function saveReport() {
-    const rows = [...$('#table tbody').rows];
-    const data = rows.map(row => {
-      const inputs = [...row.querySelectorAll('input')];
-      return inputs.map(input => input.value);
-    });
-    localStorage.setItem(storageKey(), JSON.stringify(data));
-    alert('Guardado');
-  }
-
-  function exportAll() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    doc.text("Flugreport: " + $('#date').value, 10, 10);
-    const rows = [...$('#table tbody').rows];
-    let y = 20;
-    rows.forEach(row => {
-      const txt = [...row.querySelectorAll('input')].map(i => i.value).join(' | ');
-      doc.text(txt, 10, y);
-      y += 10;
-    });
-    doc.save("Flugreport_" + $('#date').value + ".pdf");
-  }
-
-  $('#date').onchange = () => {
-    const data = localStorage.getItem(storageKey());
-    $('#table tbody').innerHTML = '';
-    if (data) {
-      JSON.parse(data).forEach(vals => {
-        const row = document.createElement('tr');
-        vals.forEach(v => {
-          const td = document.createElement('td');
-          const input = document.createElement('input');
-          input.value = v;
-          td.appendChild(input);
-          row.appendChild(td);
-        });
-        const td = document.createElement('td');
-        const save = document.createElement('button');
-        save.textContent = '💾';
-        save.onclick = () => saveReport();
-        td.appendChild(save);
-        row.appendChild(td);
-        $('#table tbody').appendChild(row);
-      });
-    }
-  };
-</script>
+  </script>
 </body>
 </html>
