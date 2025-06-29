@@ -1,216 +1,49 @@
+
 <!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
+  <title>WISAG Flugreport</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Flugreport</title>
+  <link rel="stylesheet" href="style.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    h1 { margin-bottom: 10px; }
-    form { margin-bottom: 20px; }
-    label { display: block; margin-top: 10px; }
-    input, select, button { padding: 5px; margin-top: 5px; width: 200px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-    th { background-color: #eee; }
-    button { width: auto; margin-right: 5px; }
-  </style>
 </head>
 <body>
-</script>
+  <div id="login">
+    <div class="login-box">
+      <img src="logo-wisag.png" alt="WISAG Logo" class="logo">
+      <h2>🔒 Login Wisag</h2>
+      <input type="text" id="user" placeholder="Usuario">
+      <input type="password" id="pass" placeholder="Contraseña">
+      <button onclick="login()">Entrar</button>
+      <p id="error" class="error-msg"></p>
+    </div>
+  </div>
 
-<h1>Flugreport</h1>
+  <div id="app" style="display:none;">
+    <header>
+      <img src="logo-condor.png" alt="Condor">
+      <img src="logo-klm.png" alt="KLM">
+      <img src="logo-af.png" alt="Air France">
+      <img src="logo-easyjet.png" alt="easyJet">
+    </header>
+    <h1>Flugreport</h1>
+    <label>Fecha del reporte:</label>
+    <input type="date" id="date" value="">
+    <button onclick="addReport()">➕ Nuevo vuelo</button>
+    <button onclick="exportAll()" class="btn-green">📄 Exportar todos a PDF</button>
 
-<label for="datum">Datum wählen:</label>
-<input type="date" id="datum" />
+    <table>
+      <thead>
+        <tr>
+          <th>#</th><th>Aerolínea</th><th>Vuelo</th><th>STD</th><th>ATD</th><th>Delay</th><th>Min</th><th>Check-in</th><th>Gate</th><th>Firma</th><th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
 
-<form id="flugForm">
-  <label for="airline">Airline:</label>
-  <input type="text" id="airline" required />
-
-  <label for="flugnummer">Flugnummer:</label>
-  <input type="text" id="flugnummer" required />
-
-  <label for="std">STD (Scheduled Time of Departure):</label>
-  <input type="time" id="std" required />
-
-  <label for="atd">ATD (Actual Time of Departure):</label>
-  <input type="time" id="atd" required />
-
-  <label for="delaycode">Delay Code + Minuten:</label>
-  <input type="text" id="delaycode" placeholder="z.B. WX + 15" required />
-
-  <label for="checkin">Check-in Report:</label>
-  <input type="text" id="checkin" required />
-
-  <label for="gate">Gate Report:</label>
-  <input type="text" id="gate" required />
-
-  <label for="unterschrift">Unterschrift:</label>
-  <input type="text" id="unterschrift" required />
-
-  <button type="submit">Flug melden</button>
-</form>
-
-<button id="exportAll">Alle Reports als PDF exportieren</button>
-
-<table>
-  <thead>
-    <tr>
-      <th>#</th>
-      <th>Airline + Flugnummer</th>
-      <th>STD</th>
-      <th>ATD</th>
-      <th>Delaycode</th>
-      <th>Check-in</th>
-      <th>Gate</th>
-      <th>Unterschrift</th>
-      <th>Aktionen</th>
-    </tr>
-  </thead>
-  <tbody id="flugTabelle"></tbody>
-</table>
-
-<script>
-  // Variables globales
-  let reports = {};
-  let currentDate = "";
-  let editIndex = null;
-
-  // Cargar desde localStorage
-  if (localStorage.getItem("flugReports")) {
-    reports = JSON.parse(localStorage.getItem("flugReports"));
-  }
-
-  const datumInput = document.getElementById("datum");
-  const flugForm = document.getElementById("flugForm");
-  const flugTabelle = document.getElementById("flugTabelle");
-  const exportAllBtn = document.getElementById("exportAll");
-
-  // Inicializar fecha con hoy si existe
-  function formatDate(date) {
-    return date.toISOString().split("T")[0];
-  }
-  const heute = new Date();
-  datumInput.value = formatDate(heute);
-  currentDate = datumInput.value;
-
-  // Render tabla y formulario vacio al cargar fecha
-  function renderTabelle() {
-    flugTabelle.innerHTML = "";
-    if (!reports[currentDate]) {
-      reports[currentDate] = [];
-    }
-    reports[currentDate].forEach((r, i) => {
-      const row = flugTabelle.insertRow();
-      row.innerHTML = `
-        <td>${i + 1}</td>
-        <td>${r.airline} ${r.flugnummer}</td>
-        <td>${r.std}</td>
-        <td>${r.atd}</td>
-        <td>${r.delaycode}</td>
-        <td>${r.checkin}</td>
-        <td>${r.gate}</td>
-        <td>${r.unterschrift}</td>
-        <td>
-          <button onclick="exportSingleToPDF(${i})">📄 PDF</button>
-          <button onclick="bearbeitenReport(${i})">✏️ Bearbeiten</button>
-          <button onclick="loeschenReport(${i})">🗑️ Löschen</button>
-        </td>
-      `;
-    });
-  }
-
-  function speichernReports() {
-    localStorage.setItem("flugReports", JSON.stringify(reports));
-  }
-
-  // Añadir o editar reportes
-  flugForm.addEventListener("submit", function (e) {
-    e.preventDefault();
-    if (!reports[currentDate]) {
-      reports[currentDate] = [];
-    }
-
-    const report = {
-      airline: document.getElementById("airline").value,
-      flugnummer: document.getElementById("flugnummer").value,
-      std: document.getElementById("std").value,
-      atd: document.getElementById("atd").value,
-      delaycode: document.getElementById("delaycode").value,
-      checkin: document.getElementById("checkin").value,
-      gate: document.getElementById("gate").value,
-      unterschrift: document.getElementById("unterschrift").value
-    };
-
-    if (editIndex !== null) {
-      reports[currentDate][editIndex] = report;
-      editIndex = null;
-      flugForm.querySelector("button").textContent = "Flug melden";
-    } else {
-      reports[currentDate].push(report);
-    }
-    speichernReports();
-    flugForm.reset();
-    renderTabelle();
-  });
-
-  function bearbeitenReport(index) {
-    const report = reports[currentDate][index];
-    document.getElementById("airline").value = report.airline;
-    document.getElementById("flugnummer").value = report.flugnummer;
-    document.getElementById("std").value = report.std;
-    document.getElementById("atd").value = report.atd;
-    document.getElementById("delaycode").value = report.delaycode;
-    document.getElementById("checkin").value = report.checkin;
-    document.getElementById("gate").value = report.gate;
-    document.getElementById("unterschrift").value = report.unterschrift;
-
-    editIndex = index;
-    flugForm.querySelector("button").textContent = "Änderung speichern";
-  }
-
-  function loeschenReport(index) {
-    if (confirm("Bist du sicher, dass du diesen Flug löschen möchtest?")) {
-      reports[currentDate].splice(index, 1);
-      speichernReports();
-      renderTabelle();
-    }
-  }
-
-  // Cambiar fecha
-  datumInput.addEventListener("change", () => {
-    currentDate = datumInput.value;
-    editIndex = null;
-    flugForm.reset();
-    flugForm.querySelector("button").textContent = "Flug melden";
-    renderTabelle();
-  });
-
-  // Exportar PDF individual
-  function exportSingleToPDF(index) {
-    const { jsPDF } = window.jspdf;
-    const r = reports[currentDate][index];
-    const doc = new jsPDF();
-    doc.text(`Flugreport - ${currentDate}`, 14, 15);
-    doc.autoTable({
-      startY: 25,
-      head: [['Airline + Flugnummer', 'STD', 'ATD', 'Delaycode', 'Check-in', 'Gate', 'Unterschrift']],
-      body: [[
-        `${r.airline} ${r.flugnummer}`,
-        r.std,
-        r.atd,
-        r.delaycode,
-        r.checkin,
-        r.gate,
-        r.unterschrift
-      ]]
-    });
-    doc.save(`Flug_${r.flugnummer}_${currentDate}.pdf`);
-  }
-
-  // Exportar todos los reportes del día a PDF
-  exportAllBtn.addEventListener("click", () => {
-    if (!reports[currentDate]
+  <script src="app.js"></script>
+</body>
+</html>
