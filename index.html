@@ -19,30 +19,6 @@
   </style>
 </head>
 <body>
-<script>
-  const USERNAME = "wisag";
-  const PASSWORD = "Condor@WISAGinDUS";
-
-  function pedirLogin() {
-    const user = prompt("Benutzername eingeben:");
-    const pass = prompt("Passwort eingeben:");
-
-    if (user !== USERNAME || pass !== PASSWORD) {
-      alert("Falscher Benutzername oder Passwort. Zugriff verweigert.");
-      document.body.innerHTML = "<h2>Zugriff verweigert.</h2>";
-    }
-  }
-
-  window.onload = function() {
-    pedirLogin();
-    if (document.body.innerHTML !== "<h2>Zugriff verweigert.</h2>") {
-      initApp();
-    }
-  };
-
-  function initApp() {
-    // Código de la app va aquí (luego en otro <script> al final)
-  }
 </script>
 
 <h1>Flugreport</h1>
